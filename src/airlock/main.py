@@ -6,7 +6,7 @@ from rich.markdown import Markdown
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# Initialize the app
+# Initialize the application
 app = typer.Typer()
 console = Console()
 
@@ -17,7 +17,7 @@ def get_git_diff(branch: str = None):
     """Reads the changes. If branch is provided, compares against it."""
     try:
         if branch:
-            # CI MODE: Compare against a specific branch (e.g. origin/main)
+            # CI MODE: Compare current HEAD against a specific branch
             command = ["git", "diff", branch]
         else:
             # LOCAL MODE: Compare staged files
@@ -39,7 +39,7 @@ def analyze_with_ai(diff_text):
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         console.print("[bold red]Error:[/bold red] OPENAI_API_KEY not found.")
-        raise typer.Exit()
+        raise typer.Exit(code=1)
 
     client = OpenAI(api_key=api_key)
 
@@ -64,17 +64,21 @@ def analyze_with_ai(diff_text):
     
     return response.choices[0].message.content
 
+# THIS IS THE CRITICAL PART: Defining the command clearly
 @app.command()
-def audit(branch: str = typer.Option(None, help="The branch to compare against")):
-    """Main command to run the audit."""
+def audit(branch: str = typer.Option(None, help="The branch to compare against (e.g. origin/main)")):
+    """
+    Run the AI audit on your code.
+    """
     console.print(f"[bold blue]🚀 Airlock: Starting Audit (Target: {branch if branch else 'Staged'})...[/bold blue]")
     
     diff = get_git_diff(branch)
     
     if not diff:
-        console.print("[yellow]No changes found.[/yellow]")
+        console.print("[yellow]No changes found to analyze.[/yellow]")
         return
         
+    # Truncate if too huge to save money
     if len(diff) > 10000:
         console.print("[yellow]Warning: Large diff detected. Truncating...[/yellow]")
         diff = diff[:10000]
