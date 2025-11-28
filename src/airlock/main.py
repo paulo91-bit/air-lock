@@ -6,20 +6,18 @@ from rich.markdown import Markdown
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# Initialize the app and console for printing
+# Initialize the app
 app = typer.Typer()
 console = Console()
 
-# Load environment variables (keys)
+# Load environment variables
 load_dotenv()
-
-# ... (imports remain the same)
 
 def get_git_diff(branch: str = None):
     """Reads the changes. If branch is provided, compares against it."""
     try:
         if branch:
-            # CI MODE: Compare current code against a specific branch (e.g., origin/main)
+            # CI MODE: Compare against a specific branch (e.g. origin/main)
             command = ["git", "diff", branch]
         else:
             # LOCAL MODE: Compare staged files
@@ -36,30 +34,15 @@ def get_git_diff(branch: str = None):
         console.print("[bold red]Error:[/bold red] Git command failed.")
         return None
 
-# ... (analyze_with_ai function remains the same)
-
-@app.command()
-def audit(branch: str = typer.Option(None, help="The branch to compare against (for CI/CD)")):
-    """Main command to run the audit."""
-    console.print(f"[bold blue]🚀 Airlock: Starting Audit (Target: {branch if branch else 'Staged'})...[/bold blue]")
-    
-    diff = get_git_diff(branch)
-    
-    # ... (Rest of the function remains the same)
-
 def analyze_with_ai(diff_text):
     """Sends the diff to the AI for analysis."""
-    
-    # Check for API Key
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        console.print("[bold red]Error:[/bold red] OPENAI_API_KEY not found in environment.")
-        console.print("Please set it using: $env:OPENAI_API_KEY='sk-...' (Windows Powershell)")
+        console.print("[bold red]Error:[/bold red] OPENAI_API_KEY not found.")
         raise typer.Exit()
 
     client = OpenAI(api_key=api_key)
 
-    # The Prompt
     system_prompt = """
     You are a Senior Code Reviewer. Analyze the provided git diff.
     1. Summarize what changed in 1-2 sentences.
@@ -72,7 +55,7 @@ def analyze_with_ai(diff_text):
 
     with console.status("[bold green]Consulting the AI agent...[/bold green]"):
         response = client.chat.completions.create(
-            model="gpt-4o-mini", # You can change this to gpt-3.5-turbo if needed
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -82,19 +65,19 @@ def analyze_with_ai(diff_text):
     return response.choices[0].message.content
 
 @app.command()
-def audit():
+def audit(branch: str = typer.Option(None, help="The branch to compare against")):
     """Main command to run the audit."""
-    console.print("[bold blue]🚀 Airlock: Starting Pre-Commit Audit...[/bold blue]")
+    console.print(f"[bold blue]🚀 Airlock: Starting Audit (Target: {branch if branch else 'Staged'})...[/bold blue]")
     
-    diff = get_git_diff()
+    diff = get_git_diff(branch)
     
     if not diff:
-        console.print("[yellow]No staged changes found. Did you run 'git add'? [/yellow]")
+        console.print("[yellow]No changes found.[/yellow]")
         return
         
     if len(diff) > 10000:
         console.print("[yellow]Warning: Large diff detected. Truncating...[/yellow]")
-        diff = diff[:10000] # Simple safety truncation
+        diff = diff[:10000]
 
     try:
         summary = analyze_with_ai(diff)
