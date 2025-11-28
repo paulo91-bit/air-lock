@@ -1,0 +1,6 @@
+# Create/Overwrite gitignore with the correct rules
+Set-Content -Path .gitignore -Value "venv/
+.env
+__pycache__/
+*.egg-info/
+dist/"
