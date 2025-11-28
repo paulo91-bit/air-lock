@@ -29,4 +29,4 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           # Compare this PR against the main branch
-          airlock --branch origin/main
+          airlock audit --branch origin/main
